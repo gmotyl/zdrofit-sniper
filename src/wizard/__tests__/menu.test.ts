@@ -22,7 +22,7 @@ describe('parseChoice', () => {
   });
 
   it('rejects out-of-range, unknown and malformed input with a hint', () => {
-    for (const input of ['5B', '0B', '2Z', 'B', '', '   ', 'hello', '2', 'A2', '2BB', '02B']) {
+    for (const input of ['4B', '5B', '0B', '2Z', 'B', '', '   ', 'hello', '2', 'A2', '2BB', '02B']) {
       const result = parseChoice(input, 3, items, lists);
       expect(result.kind, input).toBe('invalid');
       if (result.kind === 'invalid') {
