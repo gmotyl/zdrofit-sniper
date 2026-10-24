@@ -104,6 +104,24 @@ describe("shot runner", () => {
     expect(out.greg!.result).toBe("Booked");
   });
 
+  it("does not refresh a token valid for more than a day", async () => {
+    const state = freshState();
+    state.users[0]!.tokenExpiresAt = new Date(T.getTime() + 25 * 3_600_000).toISOString();
+    const api = fakeApi();
+    const out = await shoot(state, deps(api));
+    expect(api.login).not.toHaveBeenCalled();
+    expect(api.bookClass.mock.calls.map((c) => c[0]).sort()).toEqual(["tok-greg-old", "tok-ola-old"]);
+    expect(out.greg!.result).toBe("Booked");
+  });
+
+  it("saves outcomes even when logging throws", async () => {
+    const state = freshState();
+    const out = await shoot(state, deps(fakeApi(), () => { throw new Error("disk full"); }));
+    expect(out.greg!.result).toBe("Booked");
+    expect(state.snipers[0]!.lastOutcome).toEqual(out);
+    expect(loadState().snipers[0]!.lastOutcome).toEqual(out);
+  });
+
   it("a refused login fails only that user", async () => {
     const state = freshState();
     delete state.users[0]!.token;
@@ -174,9 +192,9 @@ describe("shot runner", () => {
     });
     const out = await shoot(state, deps(api));
     expect(out.greg).toEqual({ date: "2026-10-26", result: "Failed", reason: "retry budget" });
-    const span = at.at(-1)! - at[0]!;
-    expect(span).toBeLessThanOrEqual(60_000);
-    expect(span).toBeGreaterThan(59_000);
+    const offsets = at.map((t) => t - at[0]!);
+    expect(offsets.at(-1)).toBeGreaterThanOrEqual(59_700);
+    expect(offsets.filter((o) => o > 60_000)).toEqual([]);
   });
 
   it("still books a full class", async () => {

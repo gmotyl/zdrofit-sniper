@@ -146,16 +146,21 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
   }
 
   const outcomes: Record<string, Outcome> = {};
-  for (const [userId, s] of shooters) {
-    const o = s.outcome ?? fail("unknown");
-    outcomes[userId] = o;
-    deps.log(
-      `sniper=${sniper.id} user=${userId} date=${o.date} result=${o.result}` +
-        (o.reason ? ` reason="${o.reason}"` : "") +
-        ` status=${s.status ?? "-"} corr=${s.correlationId ?? "-"}`,
-    );
-  }
+  for (const [userId, s] of shooters) outcomes[userId] = s.outcome ?? fail("unknown");
+  // Persist before logging: a failing log must never lose the outcome.
   sniper.lastOutcome = outcomes;
   saveState(state);
+  for (const [userId, s] of shooters) {
+    const o = outcomes[userId]!;
+    try {
+      deps.log(
+        `sniper=${sniper.id} user=${userId} date=${o.date} result=${o.result}` +
+          (o.reason ? ` reason="${o.reason}"` : "") +
+          ` status=${s.status ?? "-"} corr=${s.correlationId ?? "-"}`,
+      );
+    } catch {
+      // Logging is best effort; the outcome is already saved.
+    }
+  }
   return outcomes;
 }
