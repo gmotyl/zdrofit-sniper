@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import type { Weekday } from "../schedule/opening.js";
 
 export type Outcome = { date: string; result: "Booked" | "Waitlisted" | "Failed"; reason?: string };
-export interface User { id: string; email: string; password: string; token?: string; tokenExpiresAt?: string; homeClubId: number }
+export interface User { id: string; email: string; password: string; token?: string; tokenExpiresAt?: string; homeClubId: number; memberId?: number }
 export interface Sniper {
   id: string; active: boolean; clubId: number; clubName: string; weekday: Weekday; startTime: string;
   className: string; timeTableId?: number; userIds: string[]; lastOutcome?: Record<string /* userId */, Outcome>;
