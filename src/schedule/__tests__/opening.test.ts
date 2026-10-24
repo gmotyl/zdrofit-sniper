@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextOccurrence, type SlotTime } from "../opening.js";
 
 // Warsaw is UTC+2 (CEST) until 2026-10-25 and from 2027-03-28, UTC+1 (CET) in between.
@@ -47,27 +47,41 @@ describe("nextOccurrence", () => {
     expect(nextOccurrence(monday18, new Date("2026-10-24T15:59:00Z")).date).toBe("2026-10-26");
   });
 
-  it("result does not depend on the process time zone", () => {
+  it("start right before the DST switch hour is resolved in the right offset", () => {
+    // Sun 2026-10-25 01:30 is still CEST; a first guess with the post-switch offset lands an hour late
+    const occ = nextOccurrence({ weekday: 7, startTime: "01:30" }, new Date("2026-10-22T12:00:00Z"));
+    expect(occ.date).toBe("2026-10-25");
+    expect(occ.start.toISOString()).toBe("2026-10-24T23:30:00.000Z"); // 01:30 CEST
+    expect(occ.opening.toISOString()).toBe("2026-10-22T23:30:00.000Z"); // Fri 01:30 CEST
+  });
+
+  it("result does not depend on the process time zone", async () => {
     const cases: Array<[SlotTime, string]> = [
       [monday18, "2026-10-23T10:00:00Z"],
       [monday08, "2026-10-23T10:00:00Z"],
       [monday08, "2027-03-26T11:00:00Z"],
       [{ weekday: 7, startTime: "23:30" }, "2026-10-24T22:30:00Z"],
       [{ weekday: 6, startTime: "00:15" }, "2026-10-23T23:00:00Z"],
+      [{ weekday: 7, startTime: "01:30" }, "2026-10-22T12:00:00Z"],
+      [{ weekday: 7, startTime: "01:30" }, "2027-03-25T12:00:00Z"],
     ];
-    const run = () =>
-      cases.map(([slot, now]) => {
-        const o = nextOccurrence(slot, new Date(now));
+    // Fresh module per zone: opening.ts builds its formatter at load time.
+    const runIn = async (tz: string) => {
+      process.env.TZ = tz;
+      vi.resetModules();
+      const mod = await import("../opening.js");
+      return cases.map(([slot, now]) => {
+        const o = mod.nextOccurrence(slot, new Date(now));
         return [o.date, o.start.toISOString(), o.opening.toISOString()];
       });
+    };
 
-    process.env.TZ = "Europe/Warsaw";
-    const warsaw = run();
+    const warsaw = await runIn("Europe/Warsaw");
     const offsets = new Set<number>();
     for (const tz of ["UTC", "America/New_York", "Asia/Tokyo"]) {
-      process.env.TZ = tz;
+      const result = await runIn(tz);
       offsets.add(new Date("2026-07-01T00:00:00Z").getTimezoneOffset());
-      expect(run()).toEqual(warsaw);
+      expect(result, tz).toEqual(warsaw);
     }
     // Guard: the runtime TZ switch actually took effect
     expect(offsets.size).toBe(3);
