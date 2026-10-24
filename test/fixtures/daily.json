@@ -1,0 +1,57 @@
+{
+  "_note": "Built from the DailyClasses shape in zdrofit-api spikes/login/result.json and values in spikes/early-booking/result-read.json; trainer names invented, Users entry shape assumed.",
+  "CalendarData": [
+    {
+      "Hour": "16:00",
+      "Classes": [
+        {
+          "Id": 1954156,
+          "Status": "Unavailable",
+          "StatusReason": "Za wcześnie by zarezerwować",
+          "Name": "TBC",
+          "StartTime": "2026-10-26T16:30:00",
+          "Duration": "00:55:00",
+          "BookingIndicator": { "Indicator": 0, "Limit": 40, "Available": 40 },
+          "Trainer": "Trener Testowy",
+          "Users": [],
+          "HasRelatives": false,
+          "AllowBookSeatNumber": false,
+          "IsClassAvailableOnline": false,
+          "ClassRatingSummaryInfo": { "TimeTableId": 18, "RatingsCount": 0, "Rating": 0, "Ranking": 0 },
+          "BookingPreReservationId": null
+        }
+      ]
+    },
+    {
+      "Hour": "18:00",
+      "Classes": [
+        {
+          "Id": 1954170,
+          "Status": "FullBooked",
+          "StatusReason": null,
+          "Name": "Zumba",
+          "StartTime": "2026-10-26T18:00:00",
+          "Duration": "00:55:00",
+          "BookingIndicator": { "Indicator": 100, "Limit": 30, "Available": 0 },
+          "Trainer": "Trenerka Przykładowa",
+          "Users": [{ "UserId": 900001 }],
+          "HasRelatives": false,
+          "AllowBookSeatNumber": false,
+          "IsClassAvailableOnline": true,
+          "ClassRatingSummaryInfo": { "TimeTableId": 25, "RatingsCount": 3, "Rating": 4.7, "Ranking": 0 },
+          "BookingPreReservationId": null
+        }
+      ]
+    }
+  ],
+  "PagerData": {
+    "Days": ["2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"],
+    "NextDate": "2026-10-27",
+    "PreviousDate": "2026-10-25",
+    "Date": "2026-10-26",
+    "CanGoForward": true,
+    "CanGoBack": true,
+    "QueryStartDate": "2026-10-26T00:00:00",
+    "QueryEndDate": "2026-10-26T23:59:59"
+  }
+}

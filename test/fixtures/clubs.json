@@ -1,0 +1,31 @@
+[
+  {
+    "_note": "Built from the item keys in zdrofit-api spikes/early-booking/result-read.json (246 clubs; Id 42 = Pruszków). Other values are illustrative.",
+    "Id": 42,
+    "Name": "Zdrofit Pruszków Sienkiewicza 19 (CH Nowa Stacja)",
+    "FullName": "Zdrofit Pruszków Sienkiewicza 19 (CH Nowa Stacja)",
+    "Address": "Sienkiewicza 19",
+    "City": "Pruszków",
+    "ClubNumber": "042",
+    "Latitude": 52.17,
+    "Longitude": 20.81,
+    "OpeningDate": "2015-01-01T00:00:00Z",
+    "OpeningDateLocal": "2015-01-01T01:00:00",
+    "BrandingId": 1,
+    "StateId": null
+  },
+  {
+    "Id": 7,
+    "Name": "Zdrofit Warszawa Przykładowa",
+    "FullName": "Zdrofit Warszawa Przykładowa",
+    "Address": "Przykładowa 1",
+    "City": "Warszawa",
+    "ClubNumber": "007",
+    "Latitude": 52.23,
+    "Longitude": 21.01,
+    "OpeningDate": "2012-01-01T00:00:00Z",
+    "OpeningDateLocal": "2012-01-01T01:00:00",
+    "BrandingId": 1,
+    "StateId": null
+  }
+]

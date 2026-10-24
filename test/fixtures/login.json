@@ -1,0 +1,37 @@
+{
+  "_note": "Redacted from zdrofit-api spikes/login/result.json (shape only). Token is a fake JWT, exp = 2026-11-23T07:36:03Z; all personal values are invented.",
+  "headers": {
+    "jwt-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXN0ZXJDb21wYW55IjoiZmFrZSIsIkF1dGhlbnRpY2F0aW9uVHlwZSI6Ik1lbWJlciIsIlVzZXJJZCI6OTAwMDAxLCJleHAiOjE3OTU0MTkzNjMsImlzcyI6ImZha2UtaXNzdWVyIiwiYXVkIjoiZmFrZS1hdWRpZW5jZSJ9.ZmFrZS1zaWduYXR1cmU",
+    "jwt-token-remember": "True",
+    "pg-correlation-id": "UTC2026-10-24_07-36_00000000-0000-0000-0000-000000000001"
+  },
+  "body": {
+    "User": {
+      "Member": {
+        "Id": 900001,
+        "UserNumber": "FAKE-0001",
+        "FirstName": "Jan",
+        "LastName": "Testowy",
+        "Email": "jan.testowy@example.com",
+        "PhotoUrl": "",
+        "HomeClubId": 42,
+        "DefaultClubId": 42,
+        "Type": "Member",
+        "IsGuest": false,
+        "IsFamilyChild": false,
+        "NotificationsData": {
+          "CanUpdateFromTrial": false,
+          "HasInvalidContractPaymentMethod": false,
+          "HasFingerprintAssigned": false,
+          "RemainingDeposit": 0,
+          "ContractStatus": "Current",
+          "HasMemberCardAssigned": true,
+          "DoesUserHaveAnyPin": false
+        }
+      },
+      "Employee": null,
+      "Roles": ["Member"]
+    },
+    "State": "Authenticated"
+  }
+}
