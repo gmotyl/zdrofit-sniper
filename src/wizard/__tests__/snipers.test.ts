@@ -114,21 +114,26 @@ describe('snipersScreen', () => {
   });
 
   it('toggles users on an existing sniper', async () => {
+    // s2's users differ from s1's post-toggle value, so a toggle leaking into s2 shows.
+    const before = baseState();
+    before.snipers[1]!.userIds = ['ola'];
     const { io, saved, d } = deps(['1C', '2', '', '0']);
-    const result = await snipersScreen(baseState(), d);
+    const result = await snipersScreen(before, d);
     expect(io.printed).toContain('[x] 1. greg  [x] 2. ola');
     expect(saved).toHaveLength(1);
-    const expected = baseState();
+    const expected = structuredClone(before);
     expected.snipers[0]!.userIds = ['greg'];
+    expect(result.snipers[1]).toEqual(before.snipers[1]);
     expect(result).toEqual(expected);
     expect(saved[0]).toEqual(expected);
   });
 
   it('removes and activates snipers', async () => {
-    const { saved, d } = deps(['2B', '1D', '9D', '0']);
+    // D runs while both snipers exist, so a D that flips every sniper shows on s2.
+    const { saved, d } = deps(['1D', '2B', '9D', '0']);
     const result = await snipersScreen(baseState(), d);
     expect(saved).toHaveLength(2);
-    expect(saved[0]?.snipers.map((s) => s.id)).toEqual(['s1']);
+    expect(saved[0]?.snipers).toEqual([{ ...baseState().snipers[0], active: false }, baseState().snipers[1]]);
     expect(saved[1]?.snipers).toEqual([{ ...baseState().snipers[0], active: false }]);
     expect(result).toEqual(saved[1]);
   });

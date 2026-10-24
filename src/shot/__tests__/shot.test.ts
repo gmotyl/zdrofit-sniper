@@ -193,8 +193,8 @@ describe("shot runner", () => {
     const out = await shoot(state, deps(api));
     expect(out.greg).toEqual({ date: "2026-10-26", result: "Failed", reason: "retry budget" });
     const offsets = at.map((t) => t - at[0]!);
-    expect(offsets.at(-1)).toBeGreaterThanOrEqual(59_700);
-    expect(offsets.filter((o) => o > 60_000)).toEqual([]);
+    // Fake clock: attempts land exactly every 300 ms, the last one on the budget edge.
+    expect(offsets.at(-1)).toBe(60_000);
   });
 
   it("still books a full class", async () => {

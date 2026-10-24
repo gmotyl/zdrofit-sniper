@@ -81,6 +81,24 @@ export function listingDate(weekday: Weekday, now: Date): string {
   return nextOccurrence({ weekday, startTime: '23:59' }, now).date;
 }
 
+const warsawDay = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Warsaw',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** Warsaw calendar date of an instant, `YYYY-MM-DD`. */
+function warsawToday(now: Date): string {
+  return warsawDay.format(now);
+}
+
+/** `YYYY-MM-DD` shifted by whole days. */
+function addDays(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
+}
+
 export function slotLine(n: number, c: ClassItem): string {
   return `${n}. ${c.start.slice(11, 16)}  ${c.name}${c.trainer ? ` · ${c.trainer}` : ''}`;
 }
@@ -96,10 +114,17 @@ export async function pickSlot(
   weekday: Weekday,
   now: Date,
 ): Promise<ClassItem | undefined> {
-  const date = listingDate(weekday, now);
+  let date = listingDate(weekday, now);
   let classes: ClassItem[];
   try {
     classes = await api.dailyClasses(clubId, date);
+    // Eight days ahead may not be published yet; the same weekday a week earlier lists
+    // the same recurring slots, as long as it is not today or past.
+    const earlier = addDays(date, -7);
+    if (classes.length === 0 && earlier >= addDays(warsawToday(now), 1)) {
+      date = earlier;
+      classes = await api.dailyClasses(clubId, date);
+    }
   } catch (err) {
     io.print(`Cannot list classes for ${date}: ${(err as Error).message} — nothing saved.`);
     return undefined;

@@ -8,6 +8,7 @@ const CLUBS: Club[] = [
   { id: 17, name: 'Zdrofit Wola', city: 'Warszawa' },
   { id: 9, name: 'Zdrofit Galeria', city: 'Pruszków' },
   { id: 5, name: 'Zdrofit Manufaktura', city: 'Łódź' },
+  { id: 7, name: 'Zdrofit Białołęka', city: 'Warszawa' },
 ];
 
 // Saturday 2026-10-24, 14:00 Warsaw; the next Monday is 2026-10-26.
@@ -36,6 +37,10 @@ describe('pickers', () => {
     // ł has no NFD decomposition; it still matches `lodz`.
     const io = scriptedIo(['lodz', '1']);
     expect(await pickClub(io, CLUBS, CLUBS[1])).toEqual(CLUBS[3]);
+    // Lowercase ł too: `bialoleka` matches Białołęka.
+    const lower = scriptedIo(['bialoleka', '1']);
+    expect(await pickClub(lower, CLUBS, CLUBS[1])).toEqual(CLUBS[4]);
+    expect(lower.printed).toEqual(['1. Zdrofit Białołęka (Warszawa)']);
     // A new text at the pick prompt re-filters; a bad number re-prompts with a hint.
     const refilter = scriptedIo(['prusz', 'wola', '5', '1']);
     expect(await pickClub(refilter, CLUBS, undefined)).toEqual(CLUBS[1]);
@@ -75,6 +80,22 @@ describe('pickers', () => {
       'Wybierz slot [lub zmień filtr] > ',
     ]);
     expect(slot).toEqual(MONDAY[0]);
+  });
+
+  it('falls back a week when the listed date has no classes yet', async () => {
+    // Sunday 2026-11-01 is listed (this Sunday's opening has passed); 2026-10-25 is tomorrow.
+    const SUNDAY = [cls({ id: 8, timeTableId: 88, name: 'Yoga', start: '2026-10-25T10:00:00' })];
+    const dailyClasses = vi.fn(async (_club: number, date: string) => (date === '2026-10-25' ? SUNDAY : []));
+    const io = scriptedIo(['', '1']);
+    expect(await pickSlot(io, { dailyClasses }, 42, 7, NOW)).toEqual(SUNDAY[0]);
+    expect(dailyClasses.mock.calls).toEqual([[42, '2026-11-01'], [42, '2026-10-25']]);
+
+    // Saturday 2026-10-31 is listed; a week earlier is today, so there is no fallback.
+    const none = vi.fn(async () => [] as ClassItem[]);
+    const sat = scriptedIo([]);
+    expect(await pickSlot(sat, { dailyClasses: none }, 42, 6, NOW)).toBeUndefined();
+    expect(none.mock.calls).toEqual([[42, '2026-10-31']]);
+    expect(sat.printed).toEqual(['No classes on 2026-10-31 — nothing saved.']);
   });
 
   it('toggles a checklist of users', async () => {
