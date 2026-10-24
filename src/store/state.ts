@@ -28,11 +28,17 @@ export function loadState(): State {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return { users: [], snipers: [] };
     throw err;
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as State;
+    parsed = JSON.parse(raw);
   } catch (err) {
     throw new Error(`Corrupt state file ${file}: ${(err as Error).message}`);
   }
+  const s = parsed as Partial<State> | null;
+  if (!s || typeof s !== "object" || !Array.isArray(s.users) || !Array.isArray(s.snipers)) {
+    throw new Error(`Corrupt state file ${file}: expected an object with users and snipers arrays`);
+  }
+  return s as State;
 }
 
 /** Writes to a temp file in the same dir, then renames over state.json (atomic). */
@@ -42,7 +48,8 @@ export function saveState(s: State): void {
   const file = join(dir, "state.json");
   const tmp = `${file}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(s, null, 2) + "\n", { mode: 0o600 });
-  chmodSync(tmp, 0o600); // mode is masked by umask on create
+  // writeFileSync's mode applies only on create; a stale temp file left by a crash keeps its old mode.
+  chmodSync(tmp, 0o600);
   renameSync(tmp, file);
 }
 

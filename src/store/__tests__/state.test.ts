@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync, existsSync, readdirSync, renameSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync, existsSync, readdirSync, renameSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +41,25 @@ describe("state store", () => {
     expect(readdirSync(join(dir, "data"))).toEqual(["state.json"]);
     expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(loadState()).toEqual(state);
+  });
+
+  it("fixes the mode of a stale temp file left by a crash", () => {
+    const data = join(dir, "data");
+    mkdirSync(data, { recursive: true });
+    const tmp = join(data, `state.json.${process.pid}.tmp`);
+    writeFileSync(tmp, "stale");
+    chmodSync(tmp, 0o644);
+    saveState({ users: [], snipers: [] });
+    expect(statSync(join(data, "state.json")).mode & 0o777).toBe(0o600);
+  });
+
+  it("throws with the path when the state lacks users or snipers arrays", () => {
+    const file = join(dir, "data", "state.json");
+    for (const bad of ["null", "[]", "{}", '{"users":[]}', '{"users":{},"snipers":[]}']) {
+      saveState({ users: [], snipers: [] });
+      writeFileSync(file, bad);
+      expect(() => loadState(), bad).toThrow(file);
+    }
   });
 
   it("returns empty state when the file is missing", () => {
