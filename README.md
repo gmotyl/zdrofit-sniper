@@ -78,9 +78,18 @@ New snipers are active. Every change is saved at once and restarts the daemon (s
   checked by PID plus `/proc/<pid>/cmdline` (`…/cli.js daemon`), so a PID reused by an
   unrelated process after a crash does not block it.
 - Reads the state once, logs the next opening, and sleeps until 10 minutes before it.
-- From T−10 min it refreshes login tokens that are missing or expire within a day. At the
-  opening it books every user of every sniper due at that moment. It retries "too early"
-  refusals and network errors every 300 ms for up to 60 s.
+- Each shot follows a fixed timeline relative to the opening (T):
+  - **T−10 min:** logs in again for users whose token is missing or expires within a day. A
+    failed login marks that user `Failed` (`login`).
+  - **T−5 min:** fetches the club's classes for the date and resolves the sniper's slot to a
+    class id (one retry; otherwise every user fails with `classes unavailable` or
+    `slot not found`).
+  - **T−2 s:** books all users concurrently. "Too early" refusals and network errors are
+    retried every 300 ms, for up to 60 s after the first attempt; any other refusal fails at
+    once.
+  - **Confirmation:** for each accepted user, it re-reads the class list with that user's own
+    token. Listed as a participant → `Booked`; class full or waitlist-only → `Waitlisted`;
+    otherwise `Failed`.
 - Each user's outcome (`Booked`, `Waitlisted`, or `Failed` with a reason) is saved as the
   sniper's last outcome, which the wizard shows.
 - **Reload = restart.** After every save the wizard sends `SIGTERM` to the daemon, even during a
@@ -97,14 +106,16 @@ directory.
 | ------------------ | ------------------------------------------ |
 | `state.json`       | users, snipers, tokens, last outcomes      |
 | `daemon.pid`       | PID of the running daemon                  |
-| `logs/YYYY-MM.log` | timestamped daemon and shot log, per month |
+| `logs/YYYY-MM.log` | shot outcome lines, one file per UTC month |
 
 > **Warning: `data/` holds plaintext credentials.** `state.json` stores each user's Zdrofit
 > e-mail, password, and session tokens unencrypted. The tool creates the directory with mode
 > `700` and files with mode `600`. Keep it that way (`chmod 600 data/state.json`). `data/` is in
 > `.gitignore`: never commit it, copy it into backups you share, or paste it anywhere.
 
-Logs never contain passwords, tokens, or e-mails.
+Daemon messages (next opening, idling, errors) go to stdout, which the sidecar below appends to
+`data/logs/daemon.out`. Both logs identify users only by their user id, a slug of the e-mail's
+local part (e.g. `jan-kowalski`); they never contain passwords, tokens, or full e-mail addresses.
 
 ## Deploy
 
@@ -113,12 +124,18 @@ On a server, run the daemon under a restart loop so that it comes back after eac
 ai-server-agent's), before its main loop:
 
 ```sh
-(cd /git/zdrofit-sniper && while true; do node dist/cli.js daemon >> data/logs/daemon.out 2>&1; sleep 5; done) &
+if [[ -f /git/zdrofit-sniper/dist/cli.js ]]; then
+  ( cd /git/zdrofit-sniper && mkdir -p data/logs && chmod 700 data \
+    && while true; do node dist/cli.js daemon >> data/logs/daemon.out 2>&1 || true; sleep 5; done ) &
+fi
 ```
 
-Create `data/logs` once beforehand (`mkdir -p data/logs`): the shell opens the redirect
-before the daemon gets a chance to create it. Then run `pnpm sniper setup` in the same
-directory to manage users and snipers. Process output goes to `data/logs/daemon.out`; the structured log goes to `data/logs/YYYY-MM.log`.
+The `|| true` matters: the subshell inherits the host script's `set -e`, so without it a crash
+or an `exit 1` (for example "daemon already running" or a corrupt `state.json`) would end the
+loop for good. `mkdir -p data/logs` runs first because the shell opens the redirect before the
+daemon gets a chance to create the directory. Then run `pnpm sniper setup` in the same
+directory to manage users and snipers. Daemon output goes to `data/logs/daemon.out`; shot
+outcomes go to `data/logs/YYYY-MM.log`.
 
 ## Development
 
