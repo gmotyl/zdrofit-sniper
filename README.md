@@ -115,7 +115,7 @@ directory.
 
 Daemon messages (next opening, idling, errors) go to stdout, which the sidecar below appends to
 `data/logs/daemon.out`. Both logs identify users only by their user id, a slug of the e-mail's
-local part (e.g. `jan-kowalski`); they never contain passwords, tokens, or full e-mail addresses.
+local part (e.g. `jankowalski`); they never contain passwords, tokens, or full e-mail addresses.
 
 ## Deploy
 
