@@ -56,6 +56,71 @@ describe("cli", () => {
     expect(deps.startDaemon).not.toHaveBeenCalled();
   });
 
+  function setupDeps(io: CliDeps["io"] extends () => infer T ? T : never, overrides: Partial<CliDeps> = {}): CliDeps {
+    return {
+      loadState: () => ({ users: [], snipers: [] }),
+      io: vi.fn(() => io),
+      usersScreen: vi.fn(async (s: State) => s),
+      snipersScreen: vi.fn(async (s: State) => s),
+      startDaemon: vi.fn(),
+      ...overrides,
+    };
+  }
+
+  /** scriptedIo plus a counted `close`; `end` is what the next ask does after the script runs out. */
+  function closableIo(answers: string[], end: Error = new Error("input closed")) {
+    const io = scriptedIo(answers);
+    const ask = io.ask;
+    let left = answers.length;
+    return Object.assign(io, {
+      close: vi.fn(),
+      ask: (prompt: string) => (left-- > 0 ? ask(prompt) : Promise.reject(end)),
+    });
+  }
+
+  it("setup closes the terminal on 0", async () => {
+    const io = closableIo(["0"]);
+    expect(await main(["setup"], setupDeps(io))).toBe(0);
+    expect(io.close).toHaveBeenCalledOnce();
+  });
+
+  it("setup exits 0 and closes the terminal on EOF / Ctrl+C at the main menu", async () => {
+    const io = closableIo(["x"]);
+    expect(await main(["setup"], setupDeps(io))).toBe(0);
+    expect(io.printed).toContain("Use: 1, 2, 0 = exit.");
+    expect(io.close).toHaveBeenCalledOnce();
+    expect(stderr.join("")).toBe("");
+  });
+
+  it("setup closes the terminal when a screen throws", async () => {
+    const io = closableIo(["1"]);
+    const deps = setupDeps(io, {
+      usersScreen: vi.fn(async () => {
+        throw new Error("boom");
+      }),
+    });
+    expect(await main(["setup"], deps)).toBe(1);
+    expect(stderr.join("")).toContain("boom");
+    expect(io.close).toHaveBeenCalledOnce();
+  });
+
+  it("setup closes the terminal when the main-menu ask fails", async () => {
+    const io = closableIo([], new Error("read failed"));
+    expect(await main(["setup"], setupDeps(io))).toBe(1);
+    expect(stderr.join("")).toContain("read failed");
+    expect(io.close).toHaveBeenCalledOnce();
+  });
+
+  it("setup loads state before opening the terminal", async () => {
+    const deps = setupDeps(closableIo(["0"]), {
+      loadState: () => {
+        throw new Error("Corrupt state file /x/state.json: bad");
+      },
+    });
+    expect(await main(["setup"], deps)).toBe(1);
+    expect(deps.io).not.toHaveBeenCalled();
+  });
+
   it("parses only bare menu numbers", () => {
     expect(parseMainChoice(" 1 ")).toBe("users");
     expect(parseMainChoice("2")).toBe("snipers");

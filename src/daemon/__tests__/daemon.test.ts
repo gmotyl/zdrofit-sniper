@@ -272,6 +272,17 @@ describe("isDaemonAlive", () => {
     expect(isDaemonAlive(1, probe("ok", "/usr/bin/vim\0notes.txt\0"))).toBe(false);
   });
 
+  it("needs an argument exactly `daemon`, not a substring", () => {
+    expect(isDaemonAlive(1, probe("ok", "tail\0-f\0data/logs/daemon.out\0"))).toBe(false);
+    expect(isDaemonAlive(1, probe("ok", "/usr/bin/dbus-daemon\0--session\0"))).toBe(false);
+    expect(isDaemonAlive(1, probe("ok", "node\0dist/cli.js\0setup\0"))).toBe(false);
+  });
+
+  it("needs an argument ending in cli.js next to `daemon`", () => {
+    expect(isDaemonAlive(1, probe("ok", "node\0other.js\0daemon\0"))).toBe(false);
+    expect(isDaemonAlive(1, probe("ok", "/usr/bin/node\0/srv/zdrofit-sniper/dist/cli.js\0daemon\0"))).toBe(true);
+  });
+
   it("falls back to kill-0 when /proc is unreadable", () => {
     expect(isDaemonAlive(1, probe("ok", undefined))).toBe(true);
   });

@@ -74,7 +74,9 @@ New snipers are active. Every change is saved at once and restarts the daemon (s
 
 ## Daemon (`pnpm sniper daemon`)
 
-- Writes its PID to `data/daemon.pid`. A second daemon exits if one is already running.
+- Writes its PID to `data/daemon.pid`. A second daemon exits if one is already running —
+  checked by PID plus `/proc/<pid>/cmdline` (`…/cli.js daemon`), so a PID reused by an
+  unrelated process after a crash does not block it.
 - Reads the state once, logs the next opening, and sleeps until 10 minutes before it.
 - From T−10 min it refreshes login tokens that are missing or expire within a day. At the
   opening it books every user of every sniper due at that moment. It retries "too early"

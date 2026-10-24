@@ -14,7 +14,7 @@
     "zdrofit-sniper": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/cli.js",
     "test": "vitest",
     "lint": "tsc --noEmit -p tsconfig.lint.json",
     "sniper": "node dist/cli.js",

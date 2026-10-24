@@ -86,7 +86,8 @@ const realProbe: LivenessProbe = {
 
 /**
  * True when `pid` is a live sniper daemon. A PID reused by an unrelated process after a
- * crash does not count: when procfs is readable its cmdline must mention `daemon`.
+ * crash does not count: when procfs is readable its argv must hold an argument exactly
+ * `daemon` and one ending in `cli.js` (so `tail -f daemon.out` or `dbus-daemon` do not match).
  */
 export function isDaemonAlive(pid: number, probe: LivenessProbe = realProbe): boolean {
   try {
@@ -100,7 +101,13 @@ export function isDaemonAlive(pid: number, probe: LivenessProbe = realProbe): bo
   } catch {
     return true; // no procfs: kill-0 is all we can tell
   }
-  return cmdline.includes("daemon");
+  return isDaemonCmdline(cmdline);
+}
+
+/** `/proc/<pid>/cmdline` is NUL-separated argv; matches `node …/cli.js daemon`. */
+function isDaemonCmdline(cmdline: string): boolean {
+  const args = cmdline.split("\0");
+  return args.includes("daemon") && args.some((arg) => arg.endsWith("cli.js"));
 }
 
 export function readPid(): number | undefined {

@@ -53,6 +53,21 @@ describe('terminalIo', () => {
     io.close();
   });
 
+  it('keeps no history: the up arrow does not recall a password', async () => {
+    const { input, output } = streams(true);
+    const io = terminalIo(input, output);
+    const name = io.ask('E-mail > ');
+    input.write('ewa@example.com\r');
+    expect(await name).toBe('ewa@example.com');
+    const hidden = io.askHidden('Password > ');
+    input.write('s3cret\r');
+    expect(await hidden).toBe('s3cret');
+    const next = io.ask('> ');
+    input.write('\x1b[A\x1b[A\r'); // up arrow twice, Enter
+    expect(await next).toBe('');
+    io.close();
+  });
+
   it('rejects a pending ask on close', async () => {
     const { input, output } = streams(false);
     const io = terminalIo(input, output);
