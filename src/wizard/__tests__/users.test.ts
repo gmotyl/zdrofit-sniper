@@ -108,8 +108,10 @@ describe('usersScreen', () => {
   });
 
   it('removing a user drops them from every sniper', async () => {
+    const before = baseState();
     const { saved, d } = deps(['2B', '0'], async () => session());
-    const result = await usersScreen(baseState(), d);
+    const result = await usersScreen(before, d);
+    expect(before).toEqual(baseState());
     expect(saved).toHaveLength(1);
     expect(result.users.map((u) => u.id)).toEqual(['greg']);
     expect(result.snipers.map((s) => s.userIds)).toEqual([['greg'], [], ['greg']]);
