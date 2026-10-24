@@ -120,4 +120,17 @@ describe("api client", () => {
     expect(calls[0]!.init.method).toBe("GET");
     expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBeUndefined();
   });
+  it("clubs and dailyClasses errors never contain the token", async () => {
+    stubFetch(new Response(`denied ${TOKEN}`, { status: 401 }), new Response(`denied ${TOKEN}`, { status: 500 }));
+    const errs = [
+      await clubs(TOKEN).catch((e: unknown) => e),
+      await dailyClasses(42, "2026-10-26", TOKEN).catch((e: unknown) => e),
+    ];
+    for (const err of errs) {
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/HTTP (401|500)/);
+      expect((err as Error).message).not.toContain(TOKEN);
+      expect(String((err as Error).stack)).not.toContain(TOKEN);
+    }
+  });
 });
