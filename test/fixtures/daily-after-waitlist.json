@@ -1,0 +1,40 @@
+{
+  "_note": "DailyClasses entry for the target class right after BookClass (HTTP 499). Real member id -> 900001. memberIdMapping lists every path where it appeared; usersShape lists Users entry field names/types from the raw (unredacted) response.",
+  "dailyStatus": 200,
+  "statusBefore": "FullBooked",
+  "memberIdMapping": {
+    "fake": 900001,
+    "appearsInUsers": false,
+    "pathsInDaily": [],
+    "pathsInBookBody": [],
+    "clientParsedUserIdsContainsMember": false
+  },
+  "usersCount": 0,
+  "usersShape": [],
+  "usersSample": [],
+  "entry": {
+    "Id": 1953592,
+    "Status": "FullBooked",
+    "StatusReason": null,
+    "Name": "Rowery",
+    "StartTime": "2026-10-26T19:15:00",
+    "Duration": "PT1H-5M",
+    "BookingIndicator": {
+      "Indicator": 0,
+      "Limit": 17,
+      "Available": 0
+    },
+    "Trainer": "Beata Jaroszewska",
+    "Users": [],
+    "HasRelatives": true,
+    "AllowBookSeatNumber": false,
+    "IsClassAvailableOnline": false,
+    "ClassRatingSummaryInfo": {
+      "TimeTableId": 64,
+      "RatingsCount": 58715,
+      "Rating": 4.924993613216384,
+      "Ranking": 4.9
+    },
+    "BookingPreReservationId": null
+  }
+}

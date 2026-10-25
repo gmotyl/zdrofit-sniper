@@ -1,0 +1,38 @@
+{
+  "_note": "Captured by the Task 2 waitlist spike on 2026-10-25T10:27:35.038Z. Class status before: FullBooked. Real member id replaced by 900001; other people's ids by 8000xx; token, e-mail and names redacted.",
+  "request": {
+    "path": "Classes/ClassCalendar/BookClass",
+    "body": {
+      "classId": "<classId>",
+      "clubId": "<clubId as string>"
+    }
+  },
+  "status": 499,
+  "headerNames": [
+    "cache-control",
+    "content-length",
+    "content-security-policy",
+    "content-type",
+    "date",
+    "pg-app",
+    "pg-application",
+    "pg-company",
+    "pg-correlation-id",
+    "pg-environment",
+    "pg-proxy",
+    "pg-request-time",
+    "pg-server",
+    "pg-timestamp",
+    "pg-version",
+    "set-cookie",
+    "strict-transport-security",
+    "x-content-type-options"
+  ],
+  "headers": {
+    "pg-correlation-id": "UTC2026-10-25_10-27_b85fb422-854b-4467-878c-6b1e1d9b9439",
+    "content-type": "text/plain; charset=utf-8",
+    "date": "Sun, 25 Oct 2026 10:27:34 GMT",
+    "content-length": "87"
+  },
+  "body": "Error occured. CorrelationId:\"UTC2026-10-25_10-27_306461cb-c623-4625-8846-6bae5abc1e29\""
+}
