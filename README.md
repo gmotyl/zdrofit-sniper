@@ -117,6 +117,18 @@ Daemon messages (next opening, idling, errors) go to stdout, which the sidecar b
 `data/logs/daemon.out`. Both logs identify users only by their user id, a slug of the e-mail's
 local part (e.g. `jankowalski`); they never contain passwords, tokens, or full e-mail addresses.
 
+Each shot writes one `resolve` line (class id, status and free seats 5 minutes before the opening)
+and one line per user:
+
+```
+sniper=s2 resolve date=2026-10-28 class=1953592 status=FullBooked seats=0/17
+sniper=s2 user=greg date=2026-10-28 result=Failed reason="retry budget" status=499 corr=UTC… attempts=208 netErrors=0 at=+58400ms class=FullBooked seats=0/17 body="Error occured. CorrelationId:…"
+```
+
+`attempts` counts BookClass calls, `netErrors` the ones that never got a response, `at` is the
+last response relative to the opening, `class` the status at confirmation and `body` the first
+120 characters of the last refusal.
+
 ## Deploy
 
 On a server, run the daemon under a restart loop so that it comes back after each wizard save

@@ -16,9 +16,12 @@ export interface ClassItem {
   start: string; // club-local ISO, no offset
   status: "Bookable" | "FullBooked" | "Awaitable" | "Unavailable" | string;
   userIds: number[];
+  limit?: number; // BookingIndicator.Limit
+  available?: number; // BookingIndicator.Available
 }
 
-export type BookResult = { ok: true } | { ok: false; status: number; early: boolean; correlationId?: string };
+/** `body` is a short, whitespace-collapsed excerpt of a refusal, kept for diagnostics. */
+export type BookResult = { ok: true } | { ok: false; status: number; early: boolean; correlationId?: string; body?: string };
 
 export interface Session {
   token: string;
@@ -115,11 +118,15 @@ export async function dailyClasses(clubId: number, date: string, token?: string)
     const tt = c.ClassRatingSummaryInfo?.TimeTableId;
     if (typeof tt === "number") item.timeTableId = tt;
     if (typeof c.Trainer === "string") item.trainer = c.Trainer;
+    const bi = c.BookingIndicator;
+    if (typeof bi?.Limit === "number") item.limit = bi.Limit;
+    if (typeof bi?.Available === "number") item.available = bi.Available;
     return item;
   });
 }
 
 const CORRELATION_IN_BODY = /CorrelationId:\s*"?([^"\s]+)"?/;
+const BODY_EXCERPT = 120;
 
 export async function bookClass(token: string, classId: number, clubId: number): Promise<BookResult> {
   // The web client sends clubId as a string here (spike 3).
@@ -128,5 +135,7 @@ export async function bookClass(token: string, classId: number, clubId: number):
   const out: BookResult = { ok: false, status: res.status, early: res.status === 499 };
   const correlationId = res.headers.get("pg-correlation-id") ?? CORRELATION_IN_BODY.exec(text)?.[1];
   if (correlationId) out.correlationId = correlationId;
+  const body = text.replace(/\s+/g, " ").trim().slice(0, BODY_EXCERPT);
+  if (body) out.body = body;
   return out;
 }

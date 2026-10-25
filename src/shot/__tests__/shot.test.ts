@@ -220,6 +220,33 @@ describe("shot runner", () => {
     });
   });
 
+  it("logs attempts, timing, class status and the refusal body", async () => {
+    const state = freshState();
+    state.snipers[0]!.userIds = ["greg"];
+    const api = fakeApi();
+    let n = 0;
+    api.bookClass.mockImplementation(async () => {
+      n++;
+      if (n === 2) throw new TypeError("fetch failed");
+      return n <= 8 ? { ok: false, status: 499, early: true, correlationId: `corr-${n}`, body: "Error occured." } : { ok: true };
+    });
+    api.dailyClasses.mockImplementation(async (_c: number, _d: string, token?: string) =>
+      [slot({ status: token ? "FullBooked" : "Bookable", limit: 17, available: token ? 0 : 3, userIds: token ? [MEMBER.greg] : [] })]);
+    await shoot(state, deps(api));
+    expect(lines[0]).toBe("sniper=s1 resolve date=2026-10-26 class=500 status=Bookable seats=3/17");
+    // 9 attempts, 300 ms apart from T−2 s: the accepted one lands at T+400 ms.
+    expect(lines[1]).toBe(
+      'sniper=s1 user=greg date=2026-10-26 result=Booked status=200 corr=corr-8 attempts=9 netErrors=1 at=+400ms class=FullBooked seats=0/17 body="Error occured."',
+    );
+  });
+
+  it("logs a resolve line when the slot is missing", async () => {
+    const api = fakeApi();
+    api.dailyClasses.mockResolvedValue([]);
+    await shoot(freshState(), deps(api));
+    expect(lines[0]).toBe("sniper=s1 resolve date=2026-10-26 result=slot not found");
+  });
+
   it("writes outcomes and log lines without secrets", async () => {
     const state = freshState();
     state.users[0]!.tokenExpiresAt = new Date(T.getTime() + 3_600_000).toISOString();
@@ -235,8 +262,9 @@ describe("shot runner", () => {
 
     const file = readFileSync(join(dir, "data", "logs", "2026-10.log"), "utf8");
     const fileLines = file.trim().split("\n");
-    expect(fileLines).toHaveLength(2);
-    expect(seen).toHaveLength(2);
+    expect(fileLines).toHaveLength(3);
+    expect(seen).toHaveLength(3);
+    expect(seen[0]).toBe("sniper=s1 resolve date=2026-10-26 class=500 status=Bookable seats=-");
     const greg = seen.find((l) => l.includes("user=greg"))!;
     const ola = seen.find((l) => l.includes("user=ola"))!;
     expect(greg).toMatch(/sniper=s1 .*result=Booked/);

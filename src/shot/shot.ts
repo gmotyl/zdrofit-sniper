@@ -15,8 +15,20 @@ const RETRY_EVERY = 300;
 const RETRY_BUDGET = 60_000; // after the first attempt
 const WAITLIST_STATUSES = new Set(["FullBooked", "Awaitable"]);
 
-/** Per-user progress; `status` and `correlationId` go to the log line. */
-interface Shooter { user?: User; outcome?: Outcome; status?: number; correlationId?: string }
+/** Per-user progress; everything but `user` and `outcome` goes to the log line as diagnostics. */
+interface Shooter {
+  user?: User;
+  outcome?: Outcome;
+  status?: number;
+  correlationId?: string;
+  body?: string; // excerpt of the last refusal
+  attempts?: number;
+  netErrors?: number;
+  at?: number; // ms of the last response relative to the opening
+  classStatus?: string; // class status seen at confirmation
+}
+
+const seats = (c: ClassItem) => (c.available !== undefined && c.limit !== undefined ? `${c.available}/${c.limit}` : "-");
 
 /** `UserId` claim of a ClientPortal2 JWT; fallback for users saved before memberId was stored. */
 function jwtUserId(token: string): number | undefined {
@@ -44,6 +56,13 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
       return [id, user ? { user } : { outcome: fail("unknown user") }];
     }),
   );
+  const safeLog = (line: string) => {
+    try {
+      deps.log(line);
+    } catch {
+      // Logging is best effort.
+    }
+  };
   const live = () => [...shooters.values()].filter((s): s is Shooter & { user: User } => !s.outcome && !!s.user);
 
   // T−10 min: refresh tokens missing or expiring within a day.
@@ -88,6 +107,10 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
     if (!classes) for (const s of live()) s.outcome = fail("classes unavailable");
     else if (!cls) for (const s of live()) s.outcome = fail("slot not found");
     else classId = cls.id;
+    safeLog(
+      `sniper=${sniper.id} resolve date=${occ.date}` +
+        (cls ? ` class=${cls.id} status=${cls.status} seats=${seats(cls)}` : ` result=${classes ? "slot not found" : "classes unavailable"}`),
+    );
   }
 
   if (classId !== undefined) {
@@ -98,16 +121,22 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
       live().map(async (s) => {
         const token = s.user.token!;
         const first = deps.now().getTime();
+        s.attempts = 0;
+        s.netErrors = 0;
         for (;;) {
           let r: BookResult | undefined;
+          s.attempts++;
           try {
             r = await api.bookClass(token, id, sniper.clubId);
+            s.at = deps.now().getTime() - T;
           } catch {
             r = undefined; // network error: retried like an early refusal
+            s.netErrors++;
           }
           if (r && !r.ok) {
             s.status = r.status;
             if (r.correlationId) s.correlationId = r.correlationId;
+            if (r.body) s.body = r.body;
           }
           // 200 without Tickets counts as accepted (possibly a waitlist place); confirmation decides.
           if (r && (r.ok || r.status === 200)) {
@@ -132,6 +161,7 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
       live().map(async (s) => {
         const classes = await classesOnce(s.user.token);
         const cls = classes?.find((c) => c.id === id);
+        if (cls) s.classStatus = `${cls.status} seats=${seats(cls)}`;
         if (!cls) {
           s.outcome = fail("unconfirmed");
           return;
@@ -152,15 +182,16 @@ export async function runShot(state: State, sniperId: string, occ: Occurrence, d
   saveState(state);
   for (const [userId, s] of shooters) {
     const o = outcomes[userId]!;
-    try {
-      deps.log(
-        `sniper=${sniper.id} user=${userId} date=${o.date} result=${o.result}` +
-          (o.reason ? ` reason="${o.reason}"` : "") +
-          ` status=${s.status ?? "-"} corr=${s.correlationId ?? "-"}`,
-      );
-    } catch {
-      // Logging is best effort; the outcome is already saved.
-    }
+    // Best effort: the outcome is already saved.
+    safeLog(
+      `sniper=${sniper.id} user=${userId} date=${o.date} result=${o.result}` +
+        (o.reason ? ` reason="${o.reason}"` : "") +
+        ` status=${s.status ?? "-"} corr=${s.correlationId ?? "-"}` +
+        (s.attempts !== undefined ? ` attempts=${s.attempts} netErrors=${s.netErrors}` : "") +
+        (s.at !== undefined ? ` at=${s.at >= 0 ? "+" : ""}${s.at}ms` : "") +
+        (s.classStatus ? ` class=${s.classStatus}` : "") +
+        (s.body ? ` body=${JSON.stringify(s.body)}` : ""),
+    );
   }
   return outcomes;
 }

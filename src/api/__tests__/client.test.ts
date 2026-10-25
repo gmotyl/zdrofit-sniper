@@ -57,7 +57,7 @@ describe("api client", () => {
     const corr = "UTC2026-10-24_08-01_00000000-0000-0000-0000-000000000002";
     const calls = stubFetch(new Response(`Error occured. CorrelationId:"${corr}"`, { status: 499 }));
     const res = await bookClass(TOKEN, 1954156, 42);
-    expect(res).toEqual({ ok: false, status: 499, early: true, correlationId: corr });
+    expect(res).toEqual({ ok: false, status: 499, early: true, correlationId: corr, body: `Error occured. CorrelationId:"${corr}"` });
     expect(calls[0]!.url).toBe(`${BASE}Classes/ClassCalendar/BookClass`);
     expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ classId: 1954156, clubId: "42" });
@@ -71,14 +71,22 @@ describe("api client", () => {
       new Response("boom", { status: 500 }),
     );
     expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: true });
-    expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: false, status: 200, early: false });
+    expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: false, status: 200, early: false, body: '{"ClassId":1954156}' });
     expect(await bookClass(TOKEN, 1954156, 42)).toEqual({
       ok: false,
       status: 200,
       early: false,
       correlationId: "corr-x",
+      body: "<html>not json</html>",
     });
-    expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: false, status: 500, early: false });
+    expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: false, status: 500, early: false, body: "boom" });
+  });
+
+  it("bookClass keeps a short whitespace-collapsed excerpt of the refusal body", async () => {
+    stubFetch(new Response(`  line one\n\n  line two ${"x".repeat(200)}`, { status: 503 }), new Response("", { status: 502 }));
+    const long = await bookClass(TOKEN, 1954156, 42);
+    expect(long.ok === false && long.body).toBe(`line one line two ${"x".repeat(120 - 18)}`);
+    expect(await bookClass(TOKEN, 1954156, 42)).toEqual({ ok: false, status: 502, early: false });
   });
 
   it("dailyClasses maps fixture fields to ClassItem", async () => {
@@ -93,6 +101,8 @@ describe("api client", () => {
         start: "2026-10-26T16:30:00",
         status: "Unavailable",
         userIds: [],
+        limit: 40,
+        available: 40,
       },
       {
         id: 1954170,
@@ -102,6 +112,8 @@ describe("api client", () => {
         start: "2026-10-26T18:00:00",
         status: "FullBooked",
         userIds: [900001],
+        limit: 30,
+        available: 0,
       },
     ]);
     expect(calls[0]!.url).toBe(`${BASE}Classes/ClassCalendar/DailyClasses`);
